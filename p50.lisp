@@ -13,37 +13,42 @@
     (block nil (return (reverse  plist)))))
 
 (defun calc-prime-maxlen (plist i old-mlen)
-  (let* ((x 0) (max-len 0) (max-num 0) 
-         (n (length plist)) (max-p (nth (- n 1) plist)))
+  (let* ((max-len 0) (max-num 0) 
+         (max-index (- (length plist) old-mlen) ) 
+         (p-sum 0) (max-p (car (last plist)) ))
     (loop
-      for j from i upto (- n 1) 
+      for j from i upto max-index
       for pj = (nth j plist)
-      for new-len = (+ 1 (- j i))
+      for len = (+ (- j i) 1)
       do
-      (setf x (+ x pj)) 
-      (if (> x max-p) (return))
-      (if (and (> new-len old-mlen)  (member x plist) )
-        (progn (setf max-len new-len) (setf max-num x))))
+      (setf p-sum (+ p-sum pj))
+      (if (> p-sum max-p) (return))
+      (if (and (> len old-mlen)  (member p-sum plist) )
+        (progn (setf max-len len) (setf max-num p-sum))))
     (block nil (return (list max-len max-num)))
     ))
 
 (defun main-maxlen-prime (n)
-  (let ((plist (prime-list n)) 
-        (max-len 1) (max-prime 0))
+  (let* ((max-len 1) 
+         (max-prime 0)
+         (plist (prime-list n)) 
 
-    (setf ilast (- (length plist) 1) )
-    (setf maxp (nth ilast plist))
-    (setf y maxp)
+         (last-p (car (last plist)) )
+         (max-p last-p)
 
-    (loop for i from 0 upto ilast
+         (last-i (- (length plist) 1) )
+         (max-i last-i))
+
+    (loop for i from 0 upto max-i
           for x = (nth i plist)
-          while (<= x y)
+          while (<= x max-p)
           do
           (setf mlen-mnum  (calc-prime-maxlen plist i max-len)) 
           (setf mlen (car mlen-mnum))
           (if (> mlen max-len) 
             (progn (setf max-len mlen)
                    (setf max-prime (cadr mlen-mnum))
-                   (setf y  (floor (/ maxp max-len)))
+                   (setf max-p  (floor (/ last-p max-len)))
+                   (setf last-i (+ 1 (- last-i max-len)))
                    )))
     (block nil (return max-prime))))
