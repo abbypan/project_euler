@@ -1,6 +1,6 @@
 project_euler
 =============
 
-project euler 解题记录，lisp &amp; perl
+[project euler](http://projecteuler.net/) 解题记录
 
 ![project_euler](http://projecteuler.net/profile/abbypan.png)
