@@ -1,118 +1,125 @@
 #!/usr/bin/perl
-#3053105
+#result: 3053105
 use Data::Dump qw/dump/;
 use strict;
 
-my ($MAX) = @ARGV;
+my ($max) = @ARGV;
+our $ROW_N = 2;
+our $COL_N = 3;
+our $PRIME = get_prime_list($max);
+our $MAX_P = (sort { $b <=> $a } keys(%$PRIME))[0];
+our (@m, @s, @c, @next_c);
+init_head();
+#dump('m', \@m, 's', \@s, 'c', \@c);
 
-my $plist = get_prime_list($MAX);
-our $MAX_P = ( sort { $b <=> $a } keys(%$plist) )[0];
-my $m = get_matrix_23( $MAX, $MAX_P );
+while(1){
+#dump('m', \@m, 's', \@s, 'c', \@c);
+check_prime(\@s);
 
-#dump($m);
-my $s = update_matrix($m);
+calc_next_m();
+last unless(@m);
 
-#dump($s);
-my $sum = check_prime( $plist, $s );
-
-#dump($sum);
+@s = ();
+for(my $col=$#m; $col>=0 ; $col--){
+calc_next_s(\@m, \@s, \@c, $col);
+calc_next_c(\@s, \@c, \@next_c, $col);
+#dump('col', $col, 'm', \@m, 's', \@s, 'c', \@c, 'next_c', \@next_c);
+}
+$next_c[$#m+1] = $c[$#m+1] if($c[$#m+1]);
+@c = @next_c;
+@next_c=();
+}
+#dump($PRIME);
+my $sum = 0;
+while(my ($p, $cnt) = each %$PRIME){
+$sum+=$p if($cnt==1);
+}
 print $sum, "\n";
 
+
 sub check_prime {
-    my ( $p, $m ) = @_;
-    for my $x (@$m) {
-        for my $r (@$x) {
-            for my $n (@$r) {
-                next unless ( exists $plist->{$n} );
-                $plist->{$n}++;
-                delete( $plist->{$n} ) if ( $plist->{$n} > 1 );
-            }
-        }
-    }
-
-    #    dump($plist);
-    my @plist_uniq = grep { $plist->{$_} == 1 } keys %$plist;
-    my $sum = 0;
-    $sum += $_ for @plist_uniq;
-    return $sum;
+my ($s) = @_;
+#dump($s);
+for my $r (@$s){
+   for my $n (@$r){
+	next unless(exists $PRIME->{$n});
+	$PRIME->{$n}++;
+	delete($PRIME->{$n}) if($PRIME->{$n}>1);
+}
+}
 }
 
-sub update_matrix {
-    my ($m) = @_;
-
-    #cell s : max_i , min_j
-    my @s = ();
-    my @c = ();
-
-    for my $j ( 0 .. $#{ $m->[0] } ) {
-        push @{ $s[0][$j] }, $m->[0][$j];
-    }
-
-    for my $i ( 1 .. $#$m ) {
-        for my $j ( 0 .. $#{ $m->[$i] } ) {
-            my $v    = $m->[$i][$j];
-            my @temp = ($v);
-
-            for my $i_last ( 0 .. $i - 1 ) {
-                my $max_j = $#{ $m->[$i_last] };
-                for my $j_last ( $j + 1 .. $max_j ) {
-                    push @temp, merge_cell_values( $v, $s[$i_last][$j_last] );
-                }
-            }
-
-            $s[$i][$j] = [ sort { $a <=> $b } @temp ];
-        }
-    }
-    return \@s;
+sub calc_next_s {
+	my ($m, $s, $c, $col) = @_;
+        my @data=($m->[$col]);
+	push @data, map { $_ + $m->[$col] } @{$c->[$col+1]} if($c->[$col+1]);
+        #$s->[$col] = [ sort { $a <=> $b } grep { $_<=$MAX_P } @data ];	
+	@data = grep { $_<=$MAX_P } @data ;
+        $s->[$col] = \@data;	
 }
 
-sub merge_cell_values {
-    my ( $v, $v_list ) = @_;
-    my @data;
-    for my $vv (@$v_list) {
-        my $k = $v + $vv;
-        last if ( $k > $MAX_P );
-        push @data, $k;
-    }
-    return @data;
+sub calc_next_c {
+	my ($s,$c, $next_c, $col) = @_;
+	my @data = ();
+	push @data, @{$c->[$col]} if($c->[$col]);
+	push @data, @{$s->[$_]} for ($col .. $#$s);
+	#@data = sort { $a <=> $b } grep { $_<=$MAX_P } @data;
+	@data = sort { $a <=> $b } @data;
+	$next_c->[$col] = \@data;
 }
 
-sub get_matrix_23 {
-    my ( $m, $max_p ) = @_;
-
-    my @res;
-    for ( my $i = 0, my $x = 1 ; $x < $m ; $i++, $x *= 2 ) {
-        for ( my $j = 0, my $y = 1 ; $j < $m ; $j++, $y *= 3 ) {
-            my $z = $x * $y;
-            last if ( $z > $max_p );
-            $res[$i][$j] = $z;
-        }
-    }
-
-    $res[0][0] = 0;
-
-    return \@res;
+sub calc_next_m {
+	for my $i ( 0 .. $#m ){
+		 $m[$i] *= $ROW_N;
+		if($m[$i]>$MAX_P){
+			$#m = $i-1;
+			return;
+		}
+	} 
 }
+
+
+sub init_head {
+	my $s=1;
+	my $col=0;
+	while($s<=$MAX_P){
+		push @m, $s;
+		push @{$s[$col]}, $s;
+
+		$s*=$COL_N;
+		$col++;
+	}
+	$s[0]=[];
+
+	for(my $col = $#m; $col>=0; $col--){
+		calc_next_c(\@s, \@c, \@next_c, $col); 
+	}
+	$next_c[0]=[];
+	@c = @next_c;
+	@next_c = ();
+}
+
 
 sub get_prime_list {
     my ($m) = @_;
-    my @prime_list = ( 2, 3 );
+    my @prime_list = (2, 3);
     my $n = 3;
-    while (1) {
-        $n += 2;
-        last if ( $n > $m );
-        my $is_prime = 1;
-        my $sqrt_n   = int( sqrt($n) );
-        for my $p (@prime_list) {
-            last if ( $p > $sqrt_n );
-            next unless ( $n % $p == 0 );
-            $is_prime = 0;
+    while(1){
+        $n+=2;
+        last if($n>$m);
+        my $is_prime=1;
+        my $sqrt_n = int(sqrt($n));
+        for my $p (@prime_list){
+            last if($p>$sqrt_n);
+            next unless($n % $p == 0);
+            $is_prime=0;
             last;
         }
 
-        push @prime_list, $n if ($is_prime);
+        push @prime_list, $n if($is_prime);
     }
 
     my %prime = map { $_ => 0 } @prime_list;
+    #return \@prime_list;
     return \%prime;
 }
